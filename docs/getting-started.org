@@ -1,0 +1,102 @@
+#+title: Getting started with vulpea-para
+
+This guide sets up PARA on your notes from scratch. It assumes you already have [[https://github.com/d12frosted/vulpea][vulpea]] installed and syncing your notes; if a note shows up in =vulpea-find=, you are ready.
+
+You do not need to be fluent in Emacs Lisp. There is one snippet to paste into your config; after that it is all commands you run by name with =M-x=.
+
+* The one idea
+
+PARA usually means four folders you file things into. Here it means four roles a note can play, read from its tags. Nothing moves on disk. You say "this note is an area" by tagging it, and vulpea-para answers questions like "what are my areas" or "what is on my plate today" with a quick database query.
+
+* The fast path
+
+If you just want it working, paste this and you are done:
+
+#+begin_src emacs-lisp
+  (require 'vulpea-para)
+  (vulpea-para-setup-defaults)
+#+end_src
+
+That turns on the self-updating agenda and installs a sensible default agenda view and capture templates from vulpea-para's building blocks. You now have a PARA agenda (run =M-x vulpea-para-agenda-main=) and project and meeting capture (=M-x org-capture=, then =p= or =m=).
+
+It is opt-in and a little opinionated: it sets =org-agenda-custom-commands= and the agenda prefix, and adds to =org-capture-templates=. If you would rather assemble the pieces yourself and keep your own layout, skip =setup-defaults= and follow "Wiring it into your config" in the README. Either way, the rest of this guide explains what you are looking at.
+
+* Areas
+
+An area is one of the few things you are responsible for keeping up: the blog, finances, a house plant that refuses to die. To make one:
+
+: M-x vulpea-para-capture-area
+
+Type a name, and =vulpea-para= creates the note, tags it =area=, and seeds it with a =Notes / Tasks / Archive= skeleton so projects have somewhere to land. To turn a note you already have into an area instead, just add a tag near the top:
+
+#+begin_src org
+  #+filetags: :area:
+#+end_src
+
+Either way, =M-x vulpea-para-find-area= will now offer it.
+
+* Projects
+
+A project is a piece of work with a finish line, and it lives inside its area as a TODO heading. You do not make a file for it or decide where it goes; you say which area it belongs to:
+
+: M-x vulpea-para-capture-project
+
+Pick the area, type a title, and a heading like this lands under the area's =Tasks=:
+
+#+begin_src org
+  ** TODO Ship the v2.1 post :project:
+  :PROPERTIES:
+  :CATEGORY: Blog > Ship the v2.1 post
+  :END:
+#+end_src
+
+The category is what makes your agenda read "Blog > Ship the v2.1 post" instead of a bare title, so you always know which area a task serves. (If you ran =setup-defaults=, =M-x org-capture= then =p= does the same thing through the capture dispatcher.)
+
+* The agenda that builds itself
+
+Here is the part that scales. Walking thousands of notes to find the few with tasks is hopeless, so =vulpea-para= does not. Whenever you save a note, it checks whether the file holds any open work and tags it =agenda= when it does, dropping the tag when the last task is done. Your =org-agenda-files= is then just the set of files carrying that tag, fetched from the database in a few milliseconds. A file slips in and out of your agenda on its own as work appears and finishes, and you never maintain a list of agenda files again.
+
+=setup-defaults= turned this on (it is =vulpea-para-agenda-mode= underneath) and gave you a dispatcher. Three commands open views into it:
+
+- =vulpea-para-agenda-main= is the dispatcher itself: refile, today, focus, stuck projects, waiting, and this quarter.
+- =vulpea-para-agenda-person= gathers everything about a chosen person, their meetings and the tasks tagged with their name.
+- =vulpea-para-agenda-area= narrows the agenda down to a single area's file.
+
+* People and meetings
+
+A person is just a note tagged =people=, and meetings file themselves under the person they are about. Run =M-x org-capture= and press =m=, pick the person, and the meeting lands in their note. Later, =vulpea-para-agenda-person= pulls all of it back together.
+
+This is the facets idea at work: a person is a resource you read and an area you keep up, both at once.
+
+* Finding your way around
+
+Three commands, each completing over the right set of notes:
+
+- =vulpea-para-find-area= jumps to an area.
+- =vulpea-para-find-project= jumps to a project.
+- =vulpea-para-find-resource= jumps to a reference note.
+
+* Letting finished work go
+
+When a project is done, move it out of the way without losing it:
+
+: M-x vulpea-para-archive-project
+
+It slides under the area's own Archive heading and, because vulpea leaves archived notes out of its database by default, it quietly disappears from every active view. It is still in the file, still searchable; it just stops cluttering the present.
+
+* Keeping it honest
+
+Now and then, ask whether anything has drifted:
+
+: M-x vulpea-para-doctor
+
+It points out projects that ended up outside any area, and files still flagged for the agenda that no longer have open work. Both are quick to fix, and catching them early keeps the system trustworthy.
+
+* A word on buckets that overlap
+
+You may have noticed a note can be more than one thing. A person you keep notes on is a resource (you read it) and, if you maintain the relationship, an area (meetings and tasks gather under them). That is on purpose: the buckets are facets of a note, not walls between notes. Ask "which buckets is this note in" with =vulpea-para-note-buckets=, and do not be surprised when the areas and the resources share a few notes.
+
+* Where to go next
+
+- The short notes under [[file:adr/][adr/]] explain why each decision went the way it did, and the [[file:../README.org][README]] covers the architecture, roadmap, and open questions.
+- The read API (=vulpea-para-areas=, =vulpea-para-projects-in-area=, =vulpea-para-area-of=, and the rest) is there for building your own views on top.

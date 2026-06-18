@@ -1,0 +1,29 @@
+#+title: vulpea-para changelog
+
+* Unreleased
+
+The first working version, extracted from a personal PARA setup run since 2024 and rebuilt to be tested and explained.
+
+*The model*
+
+- Bucket predicates: =vulpea-para-area-p=, =vulpea-para-project-p=, =vulpea-para-resource-p=, =vulpea-para-archived-p=, and =vulpea-para-note-buckets=. Buckets are facets, not walls, so a note can be in more than one at once.
+
+*The read API*
+
+- =vulpea-para-areas=, =vulpea-para-projects=, =vulpea-para-resources=, =vulpea-para-area-of=, and =vulpea-para-projects-in-area=: fast, database-backed queries.
+
+*Capabilities*
+
+- Capture: =vulpea-para-capture-project= files a project into an area with an "Area > Project" category.
+- Agenda: =vulpea-para-agenda-mode= keeps an =agenda= tag in sync on save and builds =org-agenda-files= from a query, so the agenda stays fast and self-updating.
+- Find: =vulpea-para-find-area=, =vulpea-para-find-project=, and =vulpea-para-find-resource=.
+- Archive: =vulpea-para-archive-project= moves a finished project under its area's Archive, out of the active database.
+- Doctor: =vulpea-para-doctor= reports projects outside any area and stale agenda tags.
+- Agenda views: the heading-at-point predicates (=vulpea-para-agenda-project-p=, =-task-p=, =-project-subtree-p=), the skip functions, the =vulpea-para-agenda-cmd-*= command building blocks (refile/today/focus/stuck/projects/waiting/current-quarter), =-agenda-category= (the Area > Project prefix formatter), and the commands =vulpea-para-agenda-main=, =-person=, and =-area=. vulpea-para never sets =org-agenda-custom-commands=; you assemble these yourself (see the README).
+- Capture suite: =vulpea-para-capture-area=, the direct =vulpea-para-capture-project=, and the Org capture building blocks for tasks, projects, and meetings (=vulpea-para-capture-task-template=, =-project-target=, =-project-template=, =-meeting-target=, =-meeting-template=). Meetings file under the person they are about; a shared =vulpea-para-people-tag= marks person notes.
+- vulpea-para never sets an org variable; it ships the agenda command building blocks and capture functions and you assemble your own =org-agenda-custom-commands= and =org-capture-templates= (ADR 0006).
+- Open work now also counts force tags (=vulpea-para-open-work-tags=, default REFILE) and active timestamps, and the agenda file list takes a filter (=vulpea-para-agenda-files-filter=) for excluding notes.
+
+*Design*
+
+- 6 ADRs under =docs/adr/= record the load-bearing decisions; the README covers the architecture, roadmap, and open questions.

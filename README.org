@@ -1,0 +1,107 @@
+#+title: vulpea-para
+
+PARA for your notes, without the filing.
+
+vulpea-para brings the PARA method (Projects, Areas, Resources, Archives) to an Org-mode note collection, on top of [[https://github.com/d12frosted/vulpea][vulpea]]. The idea: you do not file notes into four folders. A note lives wherever it lives, and its PARA role is read back from its tags with a fast database query. You reclassify by flipping a tag, not by moving files around and repairing links.
+
+This is early software, pulled out of a personal PARA setup I have run daily since ~2024-2025 and rebuilt here to be tested, explained, and shareable. Expect things to move.
+
+* The shape of it
+
+Four buckets, recognized rather than filed:
+
+- *Areas* are the pillars: one note per ongoing responsibility (the blog, finances, a garden), tagged =:area:=.
+- *Projects* are headings with a finish line, tagged =:project:=, living inside the area they belong to.
+- *Resources* are your reference notes; most of your notes are these.
+- *Archives* are anything that has gone quiet, moved aside but still searchable.
+
+And the nice part: these are facets, not walls. A note can be more than one at once (a person is a resource you read, and an area you keep up).
+
+* What you can do
+
+- *Capture* into the right place without filing: a project under an area (=M-x vulpea-para-capture-project=), a new area (=M-x vulpea-para-capture-area=), and, through the Org capture building blocks (see below), tasks and meetings filed under the person they are about. Projects get a readable =Area > Project= category.
+- Lean on an *agenda that builds itself* from the notes that actually hold open work, in a few milliseconds even across thousands of notes: turn on =vulpea-para-agenda-mode=. Ready-made views come with it, =vulpea-para-agenda-main=, =-person=, and =-area=, plus command building blocks (=vulpea-para-agenda-cmd-*=) you splice into your own dispatcher.
+- *Find* an area, a project, or a resource: =vulpea-para-find-area= and friends.
+- *Archive* a finished project into its area: =M-x vulpea-para-archive-project=.
+- Keep the whole thing honest with =M-x vulpea-para-doctor=.
+
+There is also a small, fast read API (=vulpea-para-areas=, =vulpea-para-projects=, =vulpea-para-resources=, =vulpea-para-area-of=, and so on) for building your own views on top, including reactive ones with vui.el.
+
+The [[file:docs/getting-started.org][getting started guide]] walks through setting this up from scratch, and the design lives as short notes under [[file:docs/adr/][docs/adr/]].
+
+* Wiring it into your config
+
+The fast path: call =(vulpea-para-setup-defaults)= and you get a working setup out of the box, a default agenda dispatcher, the =Area > Project= prefix, capture templates, and the self-updating agenda turned on.
+
+It is opt-in, though: vulpea-para never sets an org variable on its own. Skip =setup-defaults= and assemble the pieces yourself, so your agenda and capture layout stays exactly yours. Here is the full version.
+
+The self-updating agenda:
+
+#+begin_src emacs-lisp
+  (require 'vulpea-para)
+  (vulpea-para-agenda-mode)
+
+  ;; keep a cemetery (or anything) out of the agenda file list
+  (setq vulpea-para-agenda-files-filter
+        (lambda (note)
+          (not (vulpea-note-tagged-any-p note "cemetery"))))
+#+end_src
+
+Your agenda dispatcher, assembled from the building blocks (this stays in your config; vulpea-para only provides the pieces):
+
+#+begin_src emacs-lisp
+  (setq org-agenda-custom-commands
+        `((" " "Agenda"
+           (,vulpea-para-agenda-cmd-refile
+            ,vulpea-para-agenda-cmd-today
+            ,vulpea-para-agenda-cmd-focus
+            ,vulpea-para-agenda-cmd-stuck-projects
+            ,vulpea-para-agenda-cmd-waiting
+            ,(vulpea-para-agenda-cmd-current-quarter)))))
+
+  ;; the Area > Project prefix in the agenda
+  (setq org-agenda-prefix-format
+        '((agenda . " %(vulpea-para-agenda-category 36) %?-12t %12s")
+          (todo   . " %(vulpea-para-agenda-category 36) ")))
+#+end_src
+
+Capture, again assembled by you:
+
+#+begin_src emacs-lisp
+  (setq org-capture-templates
+        '(("t" "task" entry
+           (file+headline "inbox.org" "Tasks")
+           (function vulpea-para-capture-task-template))
+          ("p" "project" entry
+           (function vulpea-para-capture-project-target)
+           (function vulpea-para-capture-project-template))))
+#+end_src
+
+Then bind the commands you like: =vulpea-para-agenda-main=, =vulpea-para-agenda-person=, =vulpea-para-agenda-area=, =vulpea-para-capture-area=, =vulpea-para-capture-project=, =vulpea-para-find-area=, and the rest.
+
+* Architecture and roadmap
+
+vulpea-para is a library first: predicates, queries, and the capture, archive, and agenda flows, all reading from vulpea's database so they stay fast at ten thousand notes. The one place that touches a file at write time is the open-work check on save. It drives org's own agenda and capture rather than reinventing them, and its own surface stays small (the interactive commands and the doctor's report).
+
+The richer reactive views (active projects, areas gone quiet, the resources feeding a project, a browsable archive) are planned, and they will live here too, built on vui.el and vulpea-ui over this same read API. Also planned: schema validation of PARA structure, and fancier refiling.
+
+* Status
+
+Early, but real and tested. Following along is welcome; relying on it in anger is not advised yet.
+
+* Requirements
+
+- Emacs 27.2 or newer
+- [[https://github.com/d12frosted/vulpea][vulpea]] 2.2.0 or newer
+
+* Development
+
+#+begin_src sh
+  make prepare   # install dependencies
+  make test      # run the tests
+  make lint      # check style
+#+end_src
+
+* License
+
+GPLv3. See [[file:LICENSE][LICENSE]].

@@ -277,6 +277,19 @@
       (vulpea-para-agenda-files-update)
       (should (equal '("/tmp/blog.org") org-agenda-files)))))
 
+(ert-deftest vulpea-para-agenda-files-update-inhibit-test ()
+  "Updating is a no-op while `vulpea-para-agenda-inhibit-files-update'.
+
+This is what keeps `vulpea-para-agenda-area' scoped to one file even
+though the agenda-mode advice runs on every `org-agenda' call."
+  (vulpea-para-test--with-temp-db
+    (vulpea-para-test--insert "a1" "Blog" :level 0 :tags '("agenda")
+                              :path "/tmp/blog.org")
+    (let ((org-agenda-files '("/tmp/area.org"))
+          (vulpea-para-agenda-inhibit-files-update t))
+      (vulpea-para-agenda-files-update)
+      (should (equal '("/tmp/area.org") org-agenda-files)))))
+
 ;;; Capture
 
 (ert-deftest vulpea-para-category-test ()

@@ -2,6 +2,12 @@
 
 PARA for your notes, without the filing.
 
+#+begin_html
+<p align="center">
+  <a href="https://github.com/sponsors/d12frosted"><img alt="Sponsor" src="https://img.shields.io/badge/Sponsor-d12frosted-pink?logo=githubsponsors&logoColor=white"/></a>
+</p>
+#+end_html
+
 vulpea-para brings the PARA method (Projects, Areas, Resources, Archives) to an Org-mode note collection, on top of [[https://github.com/d12frosted/vulpea][vulpea]]. The idea: you do not file notes into four folders. A note lives wherever it lives, and its PARA role is read back from its tags with a fast database query. You reclassify by flipping a tag, not by moving files around and repairing links.
 
 This is early software, pulled out of a personal PARA setup I have run daily since ~2024-2025 and rebuilt here to be tested, explained, and shareable. Expect things to move.
@@ -101,6 +107,10 @@ Early, but real and tested. Following along is welcome; relying on it in anger i
   make test      # run the tests
   make lint      # check style
 #+end_src
+
+* Support
+
+If you enjoy this project, you can support its development via [[https://github.com/sponsors/d12frosted][GitHub Sponsors]] or [[https://www.patreon.com/d12frosted][Patreon]].
 
 * License
 

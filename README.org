@@ -3,7 +3,9 @@
 PARA for your notes, without the filing.
 
 #+begin_html
-<p align="center">
+<p>
+  <a href="https://github.com/d12frosted/vulpea-para/releases"><img alt="Release" src="https://img.shields.io/github/v/release/d12frosted/vulpea-para?include_prereleases"/></a>
+  <a href="https://github.com/d12frosted/vulpea-para/actions"><img alt="CI" src="https://github.com/d12frosted/vulpea-para/actions/workflows/main.yml/badge.svg"/></a>
   <a href="https://github.com/sponsors/d12frosted"><img alt="Sponsor" src="https://img.shields.io/badge/Sponsor-d12frosted-pink?logo=githubsponsors&logoColor=white"/></a>
 </p>
 #+end_html

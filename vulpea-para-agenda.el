@@ -303,6 +303,16 @@ You define that command in your own `org-agenda-custom-commands'."
   :type 'string
   :group 'vulpea-para)
 
+(defcustom vulpea-para-agenda-main-buffer-name "*PARA agenda*"
+  "Buffer name for the agenda built by `vulpea-para-setup-defaults'.
+
+The dispatcher that `vulpea-para-setup-defaults' installs binds
+`org-agenda-buffer-name' to this, so the main agenda gets a stable,
+recognizable name instead of the shared `*Org Agenda*'.  Set it before
+calling `vulpea-para-setup-defaults' to use your own."
+  :type 'string
+  :group 'vulpea-para)
+
 ;;;; Skip functions (for `org-agenda-skip-function')
 
 (defun vulpea-para-agenda-skip-habits ()

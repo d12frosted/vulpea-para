@@ -470,14 +470,24 @@
 (ert-deftest vulpea-para-setup-defaults-test ()
   "Setup-defaults installs the agenda commands and capture templates."
   (cl-letf (((symbol-function 'vulpea-para-agenda-mode) #'ignore))
-    (let (org-agenda-custom-commands
+    (let ((vulpea-para-agenda-main-buffer-name "*test agenda*")
+          org-agenda-custom-commands
           org-agenda-prefix-format
           org-capture-templates)
       (vulpea-para-setup-defaults)
       (should (assoc " " org-agenda-custom-commands))
       (should (assoc "p" org-capture-templates))
       (should (assoc "m" org-capture-templates))
-      (should org-agenda-prefix-format))))
+      (should org-agenda-prefix-format)
+      ;; the main command names its buffer from the configurable default
+      (should (equal (cadr (assq 'org-agenda-buffer-name
+                                 (nth 3 (assoc " " org-agenda-custom-commands))))
+                     "*test agenda*"))
+      ;; meetings clock in on capture
+      (should (plist-get (nthcdr 5 (assoc "m" org-capture-templates))
+                         :clock-in))
+      (should (plist-get (nthcdr 5 (assoc "m" org-capture-templates))
+                         :clock-resume)))))
 
 (provide 'vulpea-para-test)
 ;;; vulpea-para-test.el ends here

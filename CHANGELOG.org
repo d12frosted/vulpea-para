@@ -3,6 +3,8 @@
 * Unreleased
 
 - =vulpea-para-agenda-mode= now maintains the =agenda= tag only for files in your vault (under =vulpea-db-sync-directories=), so Org files you edit elsewhere are left alone. The scope is configurable through the new =vulpea-para-agenda-tag-scope=; set it to a function that always returns non-nil to tag every Org buffer as before.
+- =vulpea-para-setup-defaults= now names the main agenda buffer through the new =vulpea-para-agenda-main-buffer-name= (default ="*PARA agenda*"=) instead of leaving it as the shared ="*Org Agenda*"=. Set it before calling setup-defaults to use your own.
+- =vulpea-para-setup-defaults='s meeting capture template now clocks in (=:clock-in t :clock-resume t=), matching how a meeting is usually captured while it happens.
 
 * v0.1.0
 

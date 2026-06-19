@@ -39,7 +39,7 @@ The [[file:docs/getting-started.org][getting started guide]] walks through setti
 
 * Wiring it into your config
 
-The fast path: call =(vulpea-para-setup-defaults)= and you get a working setup out of the box, a default agenda dispatcher, the =Area > Project= prefix, capture templates, and the self-updating agenda turned on.
+The fast path: call =(vulpea-para-setup-defaults)= and you get a working setup out of the box, a default agenda dispatcher in its own buffer (=vulpea-para-agenda-main-buffer-name=), the =Area > Project= prefix, capture templates, and the self-updating agenda turned on.
 
 It is opt-in, though: vulpea-para never sets an org variable on its own. Skip =setup-defaults= and assemble the pieces yourself, so your agenda and capture layout stays exactly yours. Here is the full version.
 

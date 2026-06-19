@@ -111,12 +111,21 @@ is set, notes it rejects are left out."
       (setq notes (seq-filter vulpea-para-agenda-files-filter notes)))
     (seq-uniq (mapcar #'vulpea-note-path notes))))
 
+(defvar vulpea-para-agenda-inhibit-files-update nil
+  "When non-nil, `vulpea-para-agenda-files-update' leaves files alone.
+
+Bind it around an `org-agenda' call that sets `org-agenda-files' itself,
+so the agenda-mode advice does not overwrite the restriction.
+`vulpea-para-agenda-area' binds it to stay scoped to a single file.")
+
 (defun vulpea-para-agenda-files-update (&rest _)
   "Set `org-agenda-files' to the PARA agenda files.
 
 Ignores its arguments, so it works as :before advice on `org-agenda'
-and `org-todo-list'."
-  (setq org-agenda-files (vulpea-para-agenda-files)))
+and `org-todo-list'.  Does nothing while
+`vulpea-para-agenda-inhibit-files-update' is non-nil."
+  (unless vulpea-para-agenda-inhibit-files-update
+    (setq org-agenda-files (vulpea-para-agenda-files))))
 
 ;;; Agenda predicates (operate on the heading at point)
 ;;
@@ -497,11 +506,13 @@ the notes tagged with `vulpea-para-people-tag'."
   "Show a TODO agenda restricted to a selected area's file.
 
 `org-agenda-files' is bound to the area's file only for the duration of
-the command; nothing is set permanently."
+the command; nothing is set permanently.  The agenda-mode files update
+is inhibited so it does not widen the scope back to every agenda file."
   (interactive)
   (let* ((area (vulpea-select-from "Area" (vulpea-para-areas)
                                    :require-match t))
-         (org-agenda-files (list (vulpea-note-path area))))
+         (org-agenda-files (list (vulpea-note-path area)))
+         (vulpea-para-agenda-inhibit-files-update t))
     (org-agenda nil "t")))
 
 (provide 'vulpea-para-agenda)

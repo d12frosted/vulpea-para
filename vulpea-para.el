@@ -81,8 +81,9 @@ working agenda and capture out of the box.
 
 It overwrites `org-agenda-custom-commands' and
 `org-agenda-prefix-format', and appends to `org-capture-templates'.
-Skip it and wire things by hand if you want full control over the
-layout (see the README)."
+The main agenda is named with `vulpea-para-agenda-main-buffer-name', and
+the meeting template clocks in.  Skip it and wire things by hand if you
+want full control over the layout (see the README)."
   (vulpea-para-agenda-mode 1)
   (setq org-agenda-custom-commands
         `((" " "PARA agenda"
@@ -91,7 +92,8 @@ layout (see the README)."
             ,vulpea-para-agenda-cmd-focus
             ,vulpea-para-agenda-cmd-stuck-projects
             ,vulpea-para-agenda-cmd-waiting
-            ,(vulpea-para-agenda-cmd-current-quarter)))))
+            ,(vulpea-para-agenda-cmd-current-quarter))
+           ((org-agenda-buffer-name ,vulpea-para-agenda-main-buffer-name)))))
   (setq org-agenda-prefix-format
         '((agenda . " %(vulpea-para-agenda-category 36) %?-12t %12s")
           (todo   . " %(vulpea-para-agenda-category 36) ")
@@ -105,7 +107,8 @@ layout (see the README)."
             (function vulpea-para-capture-project-template))
            ("m" "PARA meeting" entry
             (function vulpea-para-capture-meeting-target)
-            (function vulpea-para-capture-meeting-template))))))
+            (function vulpea-para-capture-meeting-template)
+            :clock-in t :clock-resume t)))))
 
 (provide 'vulpea-para)
 ;;; vulpea-para.el ends here

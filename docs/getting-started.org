@@ -54,7 +54,7 @@ The category is what makes your agenda read "Blog > Ship the v2.1 post" instead 
 
 * The agenda that builds itself
 
-Here is the part that scales. Walking thousands of notes to find the few with tasks is hopeless, so =vulpea-para= does not. Whenever you save a note, it checks whether the file holds any open work and tags it =agenda= when it does, dropping the tag when the last task is done. Your =org-agenda-files= is then just the set of files carrying that tag, fetched from the database in a few milliseconds. A file slips in and out of your agenda on its own as work appears and finishes, and you never maintain a list of agenda files again.
+Here is the part that scales. Walking thousands of notes to find the few with tasks is hopeless, so =vulpea-para= does not. Whenever you save a note, it checks whether the file holds any open work and tags it =agenda= when it does, dropping the tag when the last task is done. Your =org-agenda-files= is then just the set of files carrying that tag, fetched from the database in a few milliseconds. A file slips in and out of your agenda on its own as work appears and finishes, and you never maintain a list of agenda files again. Only notes in your vault are watched this way, so the Org files you edit elsewhere stay untouched (=vulpea-para-agenda-tag-scope= controls that boundary).
 
 =setup-defaults= turned this on (it is =vulpea-para-agenda-mode= underneath) and gave you a dispatcher. Three commands open views into it:
 

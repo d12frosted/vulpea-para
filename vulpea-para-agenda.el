@@ -33,6 +33,8 @@
 (require 'vulpea-para-core)
 (require 'vulpea-para-db)
 
+(defvar vulpea-db-sync-directories)     ; defined in vulpea-db-sync
+
 (defcustom vulpea-para-open-work-tags '("REFILE")
   "Tags that always count as open work, whatever the TODO state.
 
@@ -218,18 +220,54 @@ Handy in `org-agenda-prefix-format', for example:
                         (t "Q4"))))
     (format "%02d%s" yy quarter)))
 
+(defun vulpea-para-vault-buffer-p ()
+  "Return non-nil when the current buffer visits a file in your vault.
+
+A file is in the vault when it lives under one of
+`vulpea-db-sync-directories'.  This is the default scope for
+`vulpea-para-agenda-mode', so Org files you edit outside your notes are
+never touched."
+  (when-let* ((file (buffer-file-name))
+              (dirs (bound-and-true-p vulpea-db-sync-directories)))
+    (let ((file (expand-file-name file)))
+      (seq-some
+       (lambda (dir)
+         (string-prefix-p (file-name-as-directory (expand-file-name dir))
+                          file))
+       dirs))))
+
+(defcustom vulpea-para-agenda-tag-scope #'vulpea-para-vault-buffer-p
+  "Predicate choosing which buffers `vulpea-para-agenda-mode' tags on save.
+
+Called with no arguments in the buffer about to be saved; non-nil means
+maintain the agenda tag here.  The default, `vulpea-para-vault-buffer-p',
+limits tagging to files in your vulpea vault, so Org files elsewhere
+never pick up an agenda tag.  To tag every Org buffer instead, set this
+to a function that always returns non-nil."
+  :type 'function
+  :group 'vulpea-para)
+
+(defun vulpea-para--maybe-update-agenda-tag ()
+  "Update the agenda tag, subject to `vulpea-para-agenda-tag-scope'.
+
+This is what `vulpea-para-agenda-mode' runs on `before-save-hook'."
+  (when (funcall vulpea-para-agenda-tag-scope)
+    (vulpea-para-update-agenda-tag)))
+
 (defun vulpea-para--install-save-hook ()
   "Install the agenda-tag updater on save in the current buffer."
-  (add-hook 'before-save-hook #'vulpea-para-update-agenda-tag nil t))
+  (add-hook 'before-save-hook #'vulpea-para--maybe-update-agenda-tag nil t))
 
 ;;;###autoload
 (define-minor-mode vulpea-para-agenda-mode
   "Keep the PARA agenda fast and self-updating.
 
-When on, every Org buffer maintains its agenda tag on save, and
+When on, Org buffers in your vault maintain their agenda tag on save, and
 `org-agenda-files' is refreshed from the database before each agenda or
-todo list is built.  You wire this up once; after that a file slips in
-and out of the agenda on its own as work appears and finishes."
+todo list is built.  The tagging scope is `vulpea-para-agenda-tag-scope',
+which limits it to your vault by default so files elsewhere are left
+alone.  You wire this up once; after that a file slips in and out of the
+agenda on its own as work appears and finishes."
   :global t
   :group 'vulpea-para
   (if vulpea-para-agenda-mode

@@ -216,6 +216,49 @@
       (should-not (member "agenda" tags))
       (should (member "area" tags)))))
 
+(ert-deftest vulpea-para-vault-buffer-p-test ()
+  "Only files under `vulpea-db-sync-directories' count as vault buffers."
+  (let ((vulpea-db-sync-directories (list "/tmp/vault")))
+    ;; a file inside the vault
+    (with-temp-buffer
+      (setq buffer-file-name "/tmp/vault/note.org")
+      (should (vulpea-para-vault-buffer-p)))
+    ;; a sibling that merely shares a name prefix is not the vault
+    (with-temp-buffer
+      (setq buffer-file-name "/tmp/vault-of-doom/note.org")
+      (should-not (vulpea-para-vault-buffer-p)))
+    ;; a file somewhere else entirely
+    (with-temp-buffer
+      (setq buffer-file-name "/tmp/elsewhere/readme.org")
+      (should-not (vulpea-para-vault-buffer-p)))
+    ;; a buffer with no file at all
+    (with-temp-buffer
+      (should-not (vulpea-para-vault-buffer-p))))
+  ;; with no vault configured, nothing counts as in the vault
+  (let ((vulpea-db-sync-directories nil))
+    (with-temp-buffer
+      (setq buffer-file-name "/tmp/vault/note.org")
+      (should-not (vulpea-para-vault-buffer-p)))))
+
+(ert-deftest vulpea-para-maybe-update-agenda-tag-scope-test ()
+  "The save-time updater only tags buffers the scope predicate accepts."
+  ;; scope rejects the buffer -> no agenda tag even with open work
+  (let ((vulpea-para-agenda-tag-scope #'ignore))
+    (with-temp-buffer
+      (org-mode)
+      (insert "#+title: A\n\n* TODO do it\n")
+      (vulpea-para--maybe-update-agenda-tag)
+      (goto-char (point-min))
+      (should-not (member "agenda" (vulpea-buffer-tags-get t)))))
+  ;; scope accepts the buffer -> the tag is maintained as usual
+  (let ((vulpea-para-agenda-tag-scope (lambda () t)))
+    (with-temp-buffer
+      (org-mode)
+      (insert "#+title: A\n\n* TODO do it\n")
+      (vulpea-para--maybe-update-agenda-tag)
+      (goto-char (point-min))
+      (should (member "agenda" (vulpea-buffer-tags-get t))))))
+
 (ert-deftest vulpea-para-agenda-files-test ()
   "Agenda files are the paths of notes carrying the agenda tag."
   (vulpea-para-test--with-temp-db

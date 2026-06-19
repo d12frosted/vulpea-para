@@ -55,6 +55,8 @@ The self-updating agenda:
           (not (vulpea-note-tagged-any-p note "cemetery"))))
 #+end_src
 
+By default the mode only tags files in your vault (under =vulpea-db-sync-directories=), so the Org files you edit elsewhere never pick up an =agenda= tag. Point =vulpea-para-agenda-tag-scope= at a different predicate to widen or narrow that.
+
 Your agenda dispatcher, assembled from the building blocks (this stays in your config; vulpea-para only provides the pieces):
 
 #+begin_src emacs-lisp

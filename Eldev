@@ -9,8 +9,10 @@
 (eldev-use-package-archive 'melpa-unstable)
 
 ;; Use the sibling vulpea checkout during development, so vulpea-para is
-;; always tested against the vulpea you actually have here.
-(eldev-use-local-dependency "../vulpea")
+;; tested against the vulpea you actually have here.  In CI there is no
+;; sibling checkout, so fall back to fetching vulpea from the archives.
+(when (file-directory-p "../vulpea")
+  (eldev-use-local-dependency "../vulpea"))
 
 ;; allow to load test helpers
 (eldev-add-loading-roots 'test "test")

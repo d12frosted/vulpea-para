@@ -1,6 +1,6 @@
 #+title: vulpea-para changelog
 
-* Unreleased
+* v0.1.0
 
 The first working version, extracted from a personal PARA setup run since 2024 and rebuilt to be tested and explained.
 

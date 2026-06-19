@@ -36,7 +36,7 @@ readable instead of a bare task title."
   (format "%s > %s" area-title project-title))
 
 (defun vulpea-para--goto-tasks-end ()
-  "Move point to where a new project goes under the `* Tasks' heading.
+  "Move point to where a new project should go under the `* Tasks' heading.
 
 Creates a `* Tasks' heading at the end of the file when there is none."
   (goto-char (point-min))

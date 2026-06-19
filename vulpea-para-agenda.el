@@ -42,7 +42,7 @@ to be sorted) keeps its file on the agenda even with no open TODO."
   :group 'vulpea-para)
 
 (defun vulpea-para-buffer-open-work-p ()
-  "Return non-nil when the current buffer holds any open work.
+  "Return non-nil when there is any open work in the current buffer.
 
 Open work is any of: a not-done TODO heading; a heading tagged with one
 of `vulpea-para-open-work-tags'; or a not-done heading carrying an

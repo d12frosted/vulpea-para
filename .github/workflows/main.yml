@@ -18,7 +18,7 @@ jobs:
           - "30.2"
           - snapshot
     steps:
-      - uses: purcell/setup-emacs@master
+      - uses: d12frosted/setup-emacs@v1
         with:
           version: ${{ matrix.emacs_version }}
 

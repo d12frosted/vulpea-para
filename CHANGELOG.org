@@ -6,6 +6,7 @@
 - =vulpea-para-setup-defaults= now names the main agenda buffer through the new =vulpea-para-agenda-main-buffer-name= (default ="*PARA agenda*"=) instead of leaving it as the shared ="*Org Agenda*"=. Set it before calling setup-defaults to use your own.
 - =vulpea-para-setup-defaults='s meeting capture template now clocks in (=:clock-in t :clock-resume t=), matching how a meeting is usually captured while it happens.
 - =vulpea-para-agenda-area= now stays restricted to the chosen area's file. With =vulpea-para-agenda-mode= on, its =org-agenda= advice reset =org-agenda-files= mid-command and the view listed every task; the refresh is now skipped while the new =vulpea-para-agenda-inhibit-files-update= variable is bound, which the command does.
+- Files can be pinned onto the agenda through the new =vulpea-para-open-work-files=. A file listed there always counts as open work, so it keeps the =agenda= tag even when empty or all-done and never drops off the agenda, handy for an inbox you always want in view. Entries are bare file names (matched by base name), absolute file names, or predicates of the buffer's file name.
 
 * v0.1.0
 

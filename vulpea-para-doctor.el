@@ -58,11 +58,14 @@ usually a leftover from moving things around by hand."
 
 These files carry the agenda tag but, as far as the database can tell,
 have no open work, so the tag is probably stale.  Saving the file fixes
-it; this just finds the drift."
+it; this just finds the drift.  Files pinned through
+`vulpea-para-open-work-files' are kept on purpose and never counted."
   (let ((open-paths (make-hash-table :test 'equal)))
     (dolist (note (vulpea-db-query #'vulpea-para--note-open-p))
       (puthash (vulpea-note-path note) t open-paths))
-    (seq-remove (lambda (path) (gethash path open-paths))
+    (seq-remove (lambda (path)
+                  (or (gethash path open-paths)
+                      (vulpea-para--open-work-path-p path)))
                 (vulpea-para-agenda-files))))
 
 ;;;###autoload

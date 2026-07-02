@@ -43,35 +43,74 @@ to be sorted) keeps its file on the agenda even with no open TODO."
   :type '(repeat string)
   :group 'vulpea-para)
 
+(defcustom vulpea-para-open-work-files nil
+  "Files that always count as holding open work.
+
+A file matched here keeps the `agenda' tag even with no open TODO, so it
+never drops off the agenda.  Handy for an inbox you always want in view,
+so you remember to empty it.
+
+Each entry is one of:
+- a bare file name with no directory, matched against the buffer file's
+  base name, so \"inbox.org\" matches wherever the inbox lives;
+- an absolute file name, matched against the buffer file;
+- a function of one argument, the buffer file's absolute name, returning
+  non-nil to match."
+  :type '(repeat (choice (file :tag "File name")
+                         (function :tag "Predicate")))
+  :group 'vulpea-para)
+
+(defun vulpea-para--open-work-path-p (path)
+  "Return non-nil when PATH is in `vulpea-para-open-work-files'.
+
+PATH is an absolute file name.  See `vulpea-para-open-work-files'."
+  (when path
+    (let ((path (expand-file-name path)))
+      (seq-some
+       (lambda (entry)
+         (cond
+          ((functionp entry) (funcall entry path))
+          ((file-name-absolute-p entry)
+           (string-equal (expand-file-name entry) path))
+          (t (string-equal entry (file-name-nondirectory path)))))
+       vulpea-para-open-work-files))))
+
+(defun vulpea-para--open-work-file-p ()
+  "Return non-nil when the current file is in `vulpea-para-open-work-files'."
+  (vulpea-para--open-work-path-p (buffer-file-name)))
+
 (defun vulpea-para-buffer-open-work-p ()
   "Return non-nil when there is any open work in the current buffer.
 
-Open work is any of: a not-done TODO heading; a heading tagged with one
-of `vulpea-para-open-work-tags'; or a not-done heading carrying an
-active timestamp (something with a date still ahead of it).  A buffer
-with only DONE or plain headings, or no headings at all, holds none."
-  (org-element-map (org-element-parse-buffer 'headline) 'headline
-    (lambda (h)
-      (let ((todo-type (org-element-property :todo-type h)))
-        (or
-         (eq 'todo todo-type)
-         (seq-intersection (org-element-property :tags h)
-                           vulpea-para-open-work-tags)
-         (and
-          (not (eq 'done todo-type))
-          (org-element-property :contents-begin h)
-          (save-excursion
-            (goto-char (org-element-property :contents-begin h))
-            ;; look for an active timestamp before the next heading, not
-            ;; in child subtrees (which :contents-end would include)
-            (let ((end (save-excursion
-                         (or (re-search-forward
-                              org-element-headline-re
-                              (org-element-property :contents-end h)
-                              t)
-                             (org-element-property :contents-end h)))))
-              (re-search-forward org-ts-regexp end t)))))))
-    nil 'first-match))
+Open work is any of: the file is one of `vulpea-para-open-work-files'; a
+not-done TODO heading; a heading tagged with one of
+`vulpea-para-open-work-tags'; or a not-done heading carrying an active
+timestamp (something with a date still ahead of it).  A buffer with only
+DONE or plain headings, or no headings at all, holds none."
+  (or
+   (vulpea-para--open-work-file-p)
+   (org-element-map (org-element-parse-buffer 'headline) 'headline
+     (lambda (h)
+       (let ((todo-type (org-element-property :todo-type h)))
+         (or
+          (eq 'todo todo-type)
+          (seq-intersection (org-element-property :tags h)
+                            vulpea-para-open-work-tags)
+          (and
+           (not (eq 'done todo-type))
+           (org-element-property :contents-begin h)
+           (save-excursion
+             (goto-char (org-element-property :contents-begin h))
+             ;; look for an active timestamp before the next heading, not
+             ;; in child subtrees (which :contents-end would include)
+             (let ((end (save-excursion
+                          (or (re-search-forward
+                               org-element-headline-re
+                               (org-element-property :contents-end h)
+                               t)
+                              (org-element-property :contents-end h)))))
+               (re-search-forward org-ts-regexp end t)))))))
+     nil 'first-match)))
 
 (defun vulpea-para-update-agenda-tag ()
   "Add or drop the agenda tag on the current file to match its open work.

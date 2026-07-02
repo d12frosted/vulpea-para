@@ -197,6 +197,50 @@
     (insert "#+title: A\n\n* A note\n<2025-06-20 Fri>\n")
     (should (vulpea-para-buffer-open-work-p))))
 
+(ert-deftest vulpea-para-buffer-open-work-p-files-test ()
+  "A file in `vulpea-para-open-work-files' always counts as open work."
+  ;; a bare name matches by base name, wherever the file lives, even with
+  ;; no headings at all
+  (let ((vulpea-para-open-work-files '("inbox.org")))
+    (with-temp-buffer
+      (org-mode)
+      (setq buffer-file-name "/tmp/vault/inbox.org")
+      (insert "#+title: Inbox\n")
+      (should (vulpea-para-buffer-open-work-p))))
+  ;; a file not on the list with no open work still holds none
+  (let ((vulpea-para-open-work-files '("inbox.org")))
+    (with-temp-buffer
+      (org-mode)
+      (setq buffer-file-name "/tmp/vault/notes.org")
+      (insert "#+title: Notes\n\n* DONE done\n")
+      (should-not (vulpea-para-buffer-open-work-p))))
+  ;; an absolute entry matches that file, not a namesake elsewhere
+  (let ((vulpea-para-open-work-files '("/tmp/vault/inbox.org")))
+    (with-temp-buffer
+      (org-mode)
+      (setq buffer-file-name "/tmp/vault/inbox.org")
+      (insert "#+title: Inbox\n")
+      (should (vulpea-para-buffer-open-work-p)))
+    (with-temp-buffer
+      (org-mode)
+      (setq buffer-file-name "/tmp/other/inbox.org")
+      (insert "#+title: Inbox\n")
+      (should-not (vulpea-para-buffer-open-work-p))))
+  ;; a predicate entry is called with the buffer's absolute file name
+  (let ((vulpea-para-open-work-files
+         (list (lambda (f) (string-suffix-p "inbox-dor.org" f)))))
+    (with-temp-buffer
+      (org-mode)
+      (setq buffer-file-name "/tmp/vault/inbox-dor.org")
+      (insert "#+title: Inbox\n")
+      (should (vulpea-para-buffer-open-work-p))))
+  ;; a buffer with no file is unaffected
+  (let ((vulpea-para-open-work-files '("inbox.org")))
+    (with-temp-buffer
+      (org-mode)
+      (insert "#+title: A\n")
+      (should-not (vulpea-para-buffer-open-work-p)))))
+
 (ert-deftest vulpea-para-update-agenda-tag-test ()
   "The agenda tag is added or dropped to match the file's open work."
   ;; open work, no tag yet -> tag is added
@@ -215,6 +259,26 @@
     (let ((tags (vulpea-buffer-tags-get t)))
       (should-not (member "agenda" tags))
       (should (member "area" tags)))))
+
+(ert-deftest vulpea-para-update-agenda-tag-open-work-files-test ()
+  "A file in `vulpea-para-open-work-files' keeps the agenda tag with no TODO."
+  (let ((vulpea-para-open-work-files '("inbox.org")))
+    ;; listed, no open work, untagged -> the tag is added
+    (with-temp-buffer
+      (org-mode)
+      (setq buffer-file-name "/tmp/vault/inbox.org")
+      (insert "#+title: Inbox\n")
+      (vulpea-para-update-agenda-tag)
+      (goto-char (point-min))
+      (should (member "agenda" (vulpea-buffer-tags-get t))))
+    ;; listed, no open work, already tagged -> the tag stays
+    (with-temp-buffer
+      (org-mode)
+      (setq buffer-file-name "/tmp/vault/inbox.org")
+      (insert "#+title: Inbox\n#+filetags: :agenda:\n")
+      (vulpea-para-update-agenda-tag)
+      (goto-char (point-min))
+      (should (member "agenda" (vulpea-buffer-tags-get t))))))
 
 (ert-deftest vulpea-para-vault-buffer-p-test ()
   "Only files under `vulpea-db-sync-directories' count as vault buffers."
@@ -380,8 +444,12 @@ though the agenda-mode advice runs on every `org-agenda' call."
     ;; f3: tagged, no tasks at all -> stale
     (vulpea-para-test--insert "a3" "F3" :level 0 :tags '("agenda")
                               :path "/tmp/f3.org")
-    (should (equal '("/tmp/f2.org" "/tmp/f3.org")
-                   (sort (vulpea-para-doctor-stale-agenda-files) #'string<)))))
+    ;; inbox: tagged, no tasks, but pinned open -> kept, not stale
+    (vulpea-para-test--insert "a4" "Inbox" :level 0 :tags '("agenda")
+                              :path "/tmp/inbox.org")
+    (let ((vulpea-para-open-work-files '("inbox.org")))
+      (should (equal '("/tmp/f2.org" "/tmp/f3.org")
+                     (sort (vulpea-para-doctor-stale-agenda-files) #'string<))))))
 
 ;;; Archive
 

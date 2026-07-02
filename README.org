@@ -57,6 +57,12 @@ The self-updating agenda:
 
 By default the mode only tags files in your vault (under =vulpea-db-sync-directories=), so the Org files you edit elsewhere never pick up an =agenda= tag. Point =vulpea-para-agenda-tag-scope= at a different predicate to widen or narrow that.
 
+A file only earns the =agenda= tag while it holds open work, so an empty or all-done file drops off the agenda. To keep one on regardless, list it in =vulpea-para-open-work-files=; such a file always counts as open work. Entries are bare file names (matched by base name, so ="inbox.org"= matches wherever it lives), absolute file names, or predicates of the buffer's file name. Handy for an inbox you always want in view:
+
+#+begin_src emacs-lisp
+  (setq vulpea-para-open-work-files '("inbox.org" "inbox-dor.org"))
+#+end_src
+
 Your agenda dispatcher, assembled from the building blocks (this stays in your config; vulpea-para only provides the pieces):
 
 #+begin_src emacs-lisp

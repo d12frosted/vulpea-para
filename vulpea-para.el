@@ -51,6 +51,7 @@
 ;; - `vulpea-para-agenda'  - the self-updating agenda, its views and
 ;;                          command building blocks.
 ;; - `vulpea-para-capture' - capture areas, projects, tasks, and meetings.
+;; - `vulpea-para-refile'  - refile targets covering the whole vault.
 ;; - `vulpea-para-find'    - find areas, projects, and resources.
 ;; - `vulpea-para-archive' - archive finished projects.
 ;; - `vulpea-para-doctor'  - find and report inconsistencies.
@@ -63,6 +64,7 @@
 (require 'vulpea-para-db)
 (require 'vulpea-para-agenda)
 (require 'vulpea-para-capture)
+(require 'vulpea-para-refile)
 (require 'vulpea-para-archive)
 (require 'vulpea-para-find)
 (require 'vulpea-para-doctor)
@@ -75,15 +77,22 @@
   "Install opinionated vulpea-para defaults.
 
 This is opt-in convenience.  It turns on `vulpea-para-agenda-mode' and
-sets `org-agenda-custom-commands', `org-agenda-prefix-format', and
-`org-capture-templates' from vulpea-para's building blocks, so you get a
-working agenda and capture out of the box.
+sets `org-agenda-custom-commands', `org-agenda-prefix-format',
+`org-capture-templates', and the refile options from vulpea-para's
+building blocks, so you get a working agenda, capture, and refile out
+of the box.
 
-It overwrites `org-agenda-custom-commands' and
-`org-agenda-prefix-format', and appends to `org-capture-templates'.
-The main agenda is named with `vulpea-para-agenda-main-buffer-name', and
-the meeting template clocks in.  Skip it and wire things by hand if you
-want full control over the layout (see the README)."
+It overwrites `org-agenda-custom-commands',
+`org-agenda-prefix-format', `org-refile-targets',
+`org-refile-use-outline-path', `org-outline-path-complete-in-steps',
+`org-refile-allow-creating-parent-nodes', and
+`org-refile-target-verify-function', and appends to
+`org-capture-templates'.  The main agenda is named with
+`vulpea-para-agenda-main-buffer-name', the meeting template clocks in,
+and refile reaches every live note in the vault (see
+`vulpea-para-refile-files'), not just the agenda files.  Skip it and
+wire things by hand if you want full control over the layout (see the
+README)."
   (vulpea-para-agenda-mode 1)
   (setq org-agenda-custom-commands
         `((" " "PARA agenda"
@@ -99,6 +108,11 @@ want full control over the layout (see the README)."
           (todo   . " %(vulpea-para-agenda-category 36) ")
           (tags   . " %(vulpea-para-agenda-category 36) ")
           (search . " %(vulpea-para-agenda-category 36) ")))
+  (setq org-refile-targets '((vulpea-para-refile-files :maxlevel . 3))
+        org-refile-use-outline-path 'file
+        org-outline-path-complete-in-steps nil
+        org-refile-allow-creating-parent-nodes 'confirm
+        org-refile-target-verify-function #'vulpea-para-refile-verify-target)
   (setq org-capture-templates
         (append
          org-capture-templates

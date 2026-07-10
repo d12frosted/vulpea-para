@@ -546,6 +546,50 @@ though the agenda-mode advice runs on every `org-agenda' call."
            (lambda (n) (not (vulpea-note-tagged-any-p n "cemetery")))))
       (should (equal '("/tmp/blog.org") (vulpea-para-agenda-files))))))
 
+;;; Refile
+
+(ert-deftest vulpea-para-refile-files-test ()
+  "Refile candidates are all live file-level notes, areas first.
+
+Archived files stay out, and heading-level notes add nothing on
+their own (org scans headings inside the returned files itself)."
+  (vulpea-para-test--with-temp-db
+    (vulpea-para-test--insert "r1" "Emacs" :level 0
+                              :path "/tmp/emacs.org")
+    (vulpea-para-test--insert "a1" "Blog" :level 0 :tags '("area")
+                              :path "/tmp/blog.org")
+    (vulpea-para-test--insert "x1" "Old" :level 0 :tags '("ARCHIVE")
+                              :path "/tmp/old.org")
+    (vulpea-para-test--insert "p1" "Ship v2" :level 1 :tags '("project")
+                              :path "/tmp/blog.org")
+    (should (equal '("/tmp/blog.org" "/tmp/emacs.org")
+                   (vulpea-para-refile-files)))))
+
+(ert-deftest vulpea-para-refile-files-filter-test ()
+  "The refile files filter keeps out notes it rejects."
+  (vulpea-para-test--with-temp-db
+    (vulpea-para-test--insert "a1" "Blog" :level 0 :tags '("area")
+                              :path "/tmp/blog.org")
+    (vulpea-para-test--insert "a2" "Dead" :level 0 :tags '("cemetery")
+                              :path "/tmp/dead.org")
+    (let ((vulpea-para-refile-files-filter
+           (lambda (n) (not (vulpea-note-tagged-any-p n "cemetery")))))
+      (should (equal '("/tmp/blog.org") (vulpea-para-refile-files))))))
+
+(ert-deftest vulpea-para-refile-verify-target-test ()
+  "Archived headings are not refile targets; their subtree is skipped."
+  (with-temp-buffer
+    (org-mode)
+    (insert "* Tasks\n* Old :ARCHIVE:\n** Child\n* Next\n")
+    (goto-char (point-min))
+    ;; a live heading is a valid target
+    (should (vulpea-para-refile-verify-target))
+    ;; an archived heading is not, and point jumps past its subtree
+    ;; so children are not offered either
+    (forward-line 1)
+    (should-not (vulpea-para-refile-verify-target))
+    (should (looking-at-p "\\* Next"))))
+
 ;;; Setup defaults
 
 (ert-deftest vulpea-para-setup-defaults-test ()
@@ -554,9 +598,22 @@ though the agenda-mode advice runs on every `org-agenda' call."
     (let ((vulpea-para-agenda-main-buffer-name "*test agenda*")
           org-agenda-custom-commands
           org-agenda-prefix-format
-          org-capture-templates)
+          org-capture-templates
+          org-refile-targets
+          org-refile-use-outline-path
+          org-outline-path-complete-in-steps
+          org-refile-allow-creating-parent-nodes
+          org-refile-target-verify-function)
       (vulpea-para-setup-defaults)
       (should (assoc " " org-agenda-custom-commands))
+      ;; refile sees the whole vault, by outline path, minus archives
+      (should (equal '((vulpea-para-refile-files :maxlevel . 3))
+                     org-refile-targets))
+      (should (eq 'file org-refile-use-outline-path))
+      (should-not org-outline-path-complete-in-steps)
+      (should (eq 'confirm org-refile-allow-creating-parent-nodes))
+      (should (eq #'vulpea-para-refile-verify-target
+                  org-refile-target-verify-function))
       (should (assoc "p" org-capture-templates))
       (should (assoc "m" org-capture-templates))
       (should org-agenda-prefix-format)

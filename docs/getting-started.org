@@ -62,6 +62,12 @@ Here is the part that scales. Walking thousands of notes to find the few with ta
 - =vulpea-para-agenda-person= gathers everything about a chosen person, their meetings and the tasks tagged with their name.
 - =vulpea-para-agenda-area= narrows the agenda down to a single area's file.
 
+* Refiling into place
+
+Captured tasks pile up in an inbox, and the dispatcher's first block ("To refile") shows them. Press =C-c C-w= on one (in the agenda or in the file) and the target list covers your whole vault: every live note, area files first, by outline path. This matters because =org-agenda-files= is only the files that already hold open work; refiling is exactly how a task reaches a note that had none, so the targets come from the database instead. Archived subtrees stay out of the list.
+
+=setup-defaults= wires this up. If a note should never be offered as a target, point =vulpea-para-refile-files-filter= at a predicate that rejects it.
+
 * People and meetings
 
 A person is just a note tagged =people=, and meetings file themselves under the person they are about. Run =M-x org-capture= and press =m=, pick the person, and the meeting lands in their note. Later, =vulpea-para-agenda-person= pulls all of it back together.

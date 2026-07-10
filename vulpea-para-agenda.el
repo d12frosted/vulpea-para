@@ -233,7 +233,7 @@ This is a pure database query; no file is visited."
 
 ;;;###autoload
 (defun vulpea-para-agenda-backfill ()
-  "Add the agenda tag to every file that holds open work without it.
+  "Add the agenda tag to the files that hold open work without it.
 
 Visits each file `vulpea-para-agenda-missing-files' reports, re-runs
 the save-time open-work check there, and saves the ones that change,

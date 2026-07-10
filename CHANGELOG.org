@@ -2,6 +2,8 @@
 
 * Unreleased
 
+- Refile targets now complete by note *title* instead of file name: =vulpea-para-setup-defaults= sets =org-refile-use-outline-path= to ='title=, so a target reads as =Barberry Garden/Tasks= rather than =20240807084021-barberry_garden.org/Tasks=. File names drift away from what a note is called while titles keep up. Set it back to ='file= if you prefer file names.
+
 - Refile target lists are now instant on large vaults. Org builds them by visiting every candidate file, which with =vulpea-para-refile-files= across a real vault meant minutes of "Getting targets..."; the new =vulpea-para-refile-mode= answers =org-refile-get-targets= straight from the database (=vulpea-para-refile-target-table=) with no file visits, whenever =org-refile-targets= is the single =vulpea-para-refile-files= entry. Everything else (org-goto, restricted refiles, foreign specs) falls through to org's own scan. =vulpea-para-setup-defaults= turns the mode on. Note that targets are now the vault's notes: a heading vulpea does not index is not offered.
 
 - Refile now reaches the whole vault, not just the agenda files. The new =vulpea-para-refile-files= plugs into =org-refile-targets= (org accepts a function as the FILES part) and returns every live file-level note from the database, area files first; =vulpea-para-refile-files-filter= keeps unwanted notes out, and the new =vulpea-para-refile-verify-target= (for =org-refile-target-verify-function=) drops archived subtrees from the candidates. =vulpea-para-setup-defaults= wires all of it, including =org-refile-use-outline-path 'file= so a file itself is a valid target.

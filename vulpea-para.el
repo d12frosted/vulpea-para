@@ -112,7 +112,9 @@ the README)."
           (search . " %(vulpea-para-agenda-category 36) ")))
   (vulpea-para-refile-mode 1)
   (setq org-refile-targets '((vulpea-para-refile-files :maxlevel . 3))
-        org-refile-use-outline-path 'file
+        ;; titles, not file names: file names drift away from what a
+        ;; note is called by now, and nobody remembers them
+        org-refile-use-outline-path 'title
         org-outline-path-complete-in-steps nil
         org-refile-allow-creating-parent-nodes 'confirm
         org-refile-target-verify-function #'vulpea-para-refile-verify-target)

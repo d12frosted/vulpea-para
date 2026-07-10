@@ -99,7 +99,7 @@ Refile, so a captured task can reach any note in the vault, not only the files t
 #+begin_src emacs-lisp
   (vulpea-para-refile-mode)
   (setq org-refile-targets '((vulpea-para-refile-files :maxlevel . 3))
-        org-refile-use-outline-path 'file
+        org-refile-use-outline-path 'title
         org-outline-path-complete-in-steps nil
         org-refile-allow-creating-parent-nodes 'confirm)
 
@@ -109,7 +109,7 @@ Refile, so a captured task can reach any note in the vault, not only the files t
           (not (vulpea-note-tagged-any-p note "cemetery"))))
 #+end_src
 
-Targets are every live note, area files first; =org-refile-use-outline-path 'file= makes a file itself a valid target, so a task can land at the top of an area or resource that has no headings yet.
+Targets are every live note, area files first, and they complete by *title*: a target reads as =Barberry Garden/Tasks=, not =20240807084021-barberry_garden.org/Tasks=, because file names drift away from what a note is called while titles keep up (prefer file names anyway? set =org-refile-use-outline-path= to ='file=). The file itself is a valid target too, so a task can land at the top of an area or resource that has no headings yet.
 
 The mode is what makes this instant. Org normally builds the target list by visiting every candidate file, which takes minutes across a real vault; the database already knows every heading, its level, and its position, so =vulpea-para-refile-mode= answers =org-refile-get-targets= with one query (=vulpea-para-refile-target-table=) and touches no file. It only steps in when =org-refile-targets= is exactly the spec above; anything else (org-goto, a manually restricted refile) falls through to org's own scan. The flip side of reading from the database: targets are the vault's notes, so a heading vulpea does not index is not offered, and a file edited but not yet saved offers its last-synced positions (org detects the drift and asks you to retry). Without the mode the same spec still works on a small vault, scanned by org the slow way, with =vulpea-para-refile-verify-target= available for =org-refile-target-verify-function= to keep archived subtrees out.
 

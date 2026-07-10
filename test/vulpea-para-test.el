@@ -712,10 +712,12 @@ to org's own scan (here: the current buffer)."
           org-refile-target-verify-function)
       (vulpea-para-setup-defaults)
       (should (assoc " " org-agenda-custom-commands))
-      ;; refile sees the whole vault, by outline path, minus archives
+      ;; refile sees the whole vault, by title path, minus archives
       (should (equal '((vulpea-para-refile-files :maxlevel . 3))
                      org-refile-targets))
-      (should (eq 'file org-refile-use-outline-path))
+      ;; titles, not file names: file names drift away from what a
+      ;; note is called, and nobody remembers them
+      (should (eq 'title org-refile-use-outline-path))
       (should-not org-outline-path-complete-in-steps)
       (should (eq 'confirm org-refile-allow-creating-parent-nodes))
       (should (eq #'vulpea-para-refile-verify-target

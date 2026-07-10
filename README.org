@@ -29,6 +29,7 @@ And the nice part: these are facets, not walls. A note can be more than one at o
 
 - *Capture* into the right place without filing: a project under an area (=M-x vulpea-para-capture-project=), a new area (=M-x vulpea-para-capture-area=), and, through the Org capture building blocks (see below), tasks and meetings filed under the person they are about. Projects get a readable =Area > Project= category.
 - Lean on an *agenda that builds itself* from the notes that actually hold open work, in a few milliseconds even across thousands of notes: turn on =vulpea-para-agenda-mode=. Ready-made views come with it, =vulpea-para-agenda-main=, =-person=, and =-area=, plus command building blocks (=vulpea-para-agenda-cmd-*=) you splice into your own dispatcher.
+- *Refile* anywhere in the vault, right from the agenda: =vulpea-para-refile-files= feeds =org-refile-targets= every live note (areas first) instead of just the agenda files, and =vulpea-para-refile-verify-target= keeps archived subtrees out of the list.
 - *Find* an area, a project, or a resource: =vulpea-para-find-area= and friends.
 - *Archive* a finished project into its area: =M-x vulpea-para-archive-project=.
 - Keep the whole thing honest with =M-x vulpea-para-doctor=.
@@ -93,13 +94,30 @@ Capture, again assembled by you:
            (function vulpea-para-capture-project-template))))
 #+end_src
 
+Refile, so a captured task can reach any note in the vault, not only the files that already carry open work (with the self-updating agenda, =org-agenda-files= is only the notes that hold work, so building refile targets from it would be backwards; refiling is exactly how work reaches a note that had none):
+
+#+begin_src emacs-lisp
+  (setq org-refile-targets '((vulpea-para-refile-files :maxlevel . 3))
+        org-refile-use-outline-path 'file
+        org-outline-path-complete-in-steps nil
+        org-refile-allow-creating-parent-nodes 'confirm
+        org-refile-target-verify-function #'vulpea-para-refile-verify-target)
+
+  ;; and, like the agenda, the target list takes a filter
+  (setq vulpea-para-refile-files-filter
+        (lambda (note)
+          (not (vulpea-note-tagged-any-p note "cemetery"))))
+#+end_src
+
+Targets are every live file-level note, area files first; =org-refile-use-outline-path 'file= makes a file itself a valid target, so a task can land at the top of an area or resource that has no headings yet. The verify function drops archived subtrees from the candidate list.
+
 Then bind the commands you like: =vulpea-para-agenda-main=, =vulpea-para-agenda-person=, =vulpea-para-agenda-area=, =vulpea-para-capture-area=, =vulpea-para-capture-project=, =vulpea-para-find-area=, and the rest.
 
 * Architecture and roadmap
 
 vulpea-para is a library first: predicates, queries, and the capture, archive, and agenda flows, all reading from vulpea's database so they stay fast at ten thousand notes. The one place that touches a file at write time is the open-work check on save. It drives org's own agenda and capture rather than reinventing them, and its own surface stays small (the interactive commands and the doctor's report).
 
-The richer reactive views (active projects, areas gone quiet, the resources feeding a project, a browsable archive) are planned, and they will live here too, built on vui.el and vulpea-ui over this same read API. Also planned: schema validation of PARA structure, and fancier refiling.
+The richer reactive views (active projects, areas gone quiet, the resources feeding a project, a browsable archive) are planned, and they will live here too, built on vui.el and vulpea-ui over this same read API. Also planned: schema validation of PARA structure.
 
 * Status
 

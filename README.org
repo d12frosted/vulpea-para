@@ -64,6 +64,8 @@ A file only earns the =agenda= tag while it holds open work, so an empty or all-
   (setq vulpea-para-open-work-files '("inbox.org" "inbox-dor.org"))
 #+end_src
 
+One catch when you bring an existing vault: the tag is maintained *on save*, so a file whose open work predates the mode is invisible to the agenda until it happens to be saved again. The symptom is TODOs that show up in =vulpea-para-agenda-area= (which reads the file directly) but not in the main agenda or the global todo list. The first agenda build of a session checks the database for this drift and warns when it finds any; run =M-x vulpea-para-agenda-backfill= once to tag every such file and the agenda catches up (=vulpea-para-agenda-warn-missing= turns the check off). If TODOs are still missing after a backfill, check that the files live under =vulpea-db-sync-directories=: that is both the tagging scope and what the database sees.
+
 Your agenda dispatcher, assembled from the building blocks (this stays in your config; vulpea-para only provides the pieces):
 
 #+begin_src emacs-lisp

@@ -546,6 +546,134 @@ though the agenda-mode advice runs on every `org-agenda' call."
            (lambda (n) (not (vulpea-note-tagged-any-p n "cemetery")))))
       (should (equal '("/tmp/blog.org") (vulpea-para-agenda-files))))))
 
+(ert-deftest vulpea-para-agenda-missing-files-test ()
+  "Missing files hold open work but lack the agenda tag."
+  (vulpea-para-test--with-temp-db
+    ;; f1: open TODO, untagged -> missing
+    (vulpea-para-test--insert "a1" "F1" :level 0 :path "/tmp/f1.org")
+    (vulpea-para-test--insert "h1" "do it" :level 1 :todo "TODO"
+                              :path "/tmp/f1.org")
+    ;; f2: open TODO, tagged -> already on the agenda
+    (vulpea-para-test--insert "a2" "F2" :level 0 :tags '("agenda")
+                              :path "/tmp/f2.org")
+    (vulpea-para-test--insert "h2" "do it too" :level 1 :todo "TODO"
+                              :path "/tmp/f2.org")
+    ;; f3: only a DONE task, untagged -> no open work, not missing
+    (vulpea-para-test--insert "a3" "F3" :level 0 :path "/tmp/f3.org")
+    (vulpea-para-test--insert "h3" "did it" :level 1 :todo "DONE"
+                              :path "/tmp/f3.org")
+    ;; f4: a heading with a force tag (REFILE), untagged -> missing
+    (vulpea-para-test--insert "a4" "F4" :level 0 :path "/tmp/f4.org")
+    (vulpea-para-test--insert "h4" "sort me" :level 1 :tags '("REFILE")
+                              :path "/tmp/f4.org")
+    (should (equal '("/tmp/f1.org" "/tmp/f4.org")
+                   (sort (vulpea-para-agenda-missing-files) #'string<)))))
+
+(ert-deftest vulpea-para-agenda-missing-files-pinned-test ()
+  "A pinned open-work file without the tag counts as missing."
+  (vulpea-para-test--with-temp-db
+    (vulpea-para-test--insert "a1" "Inbox" :level 0 :path "/tmp/inbox.org")
+    (let ((vulpea-para-open-work-files '("inbox.org")))
+      (should (equal '("/tmp/inbox.org")
+                     (vulpea-para-agenda-missing-files))))))
+
+(ert-deftest vulpea-para-agenda-missing-files-filter-test ()
+  "Notes the agenda files filter rejects are never reported missing."
+  (vulpea-para-test--with-temp-db
+    (vulpea-para-test--insert "a1" "Dead" :level 0 :tags '("cemetery")
+                              :path "/tmp/dead.org")
+    (vulpea-para-test--insert "h1" "haunt" :level 1 :todo "TODO"
+                              :path "/tmp/dead.org")
+    (let ((vulpea-para-agenda-files-filter
+           (lambda (n) (not (vulpea-note-tagged-any-p n "cemetery")))))
+      (should-not (vulpea-para-agenda-missing-files)))))
+
+(ert-deftest vulpea-para-agenda-backfill-test ()
+  "Backfill tags and saves the files the agenda is missing."
+  (let ((file (make-temp-file "vp-backfill-" nil ".org"
+                              "#+title: Blog\n\n* TODO write\n")))
+    (unwind-protect
+        (vulpea-para-test--with-temp-db
+          (vulpea-para-test--insert "a1" "Blog" :level 0 :path file)
+          (vulpea-para-test--insert "h1" "write" :level 1 :todo "TODO"
+                                    :path file)
+          (vulpea-para-agenda-backfill)
+          (with-temp-buffer
+            (insert-file-contents file)
+            (should (string-match-p "^#\\+filetags:.*:agenda:"
+                                    (buffer-string))))
+          ;; the buffer opened for tagging is not left behind
+          (should-not (find-buffer-visiting file)))
+      (when-let* ((buf (find-buffer-visiting file)))
+        (kill-buffer buf))
+      (delete-file file))))
+
+(ert-deftest vulpea-para-agenda-backfill-trusts-buffer-test ()
+  "Backfill re-checks the buffer, so a stale database row changes nothing."
+  (let ((file (make-temp-file "vp-backfill-" nil ".org"
+                              "#+title: Done\n\n* DONE all done\n")))
+    (unwind-protect
+        (vulpea-para-test--with-temp-db
+          ;; the database thinks there is an open task, the file disagrees
+          (vulpea-para-test--insert "a1" "Done" :level 0 :path file)
+          (vulpea-para-test--insert "h1" "all done" :level 1 :todo "TODO"
+                                    :path file)
+          (vulpea-para-agenda-backfill)
+          (with-temp-buffer
+            (insert-file-contents file)
+            (should-not (string-match-p "filetags" (buffer-string))))
+          (should-not (find-buffer-visiting file)))
+      (when-let* ((buf (find-buffer-visiting file)))
+        (kill-buffer buf))
+      (delete-file file))))
+
+(ert-deftest vulpea-para-agenda-files-update-warns-missing-test ()
+  "The first files update of a session warns about missing files, once."
+  (vulpea-para-test--with-temp-db
+    (vulpea-para-test--insert "a1" "F1" :level 0 :path "/tmp/f1.org")
+    (vulpea-para-test--insert "h1" "do it" :level 1 :todo "TODO"
+                              :path "/tmp/f1.org")
+    (let ((vulpea-para-agenda--warned-missing nil)
+          (org-agenda-files nil)
+          (warnings nil))
+      (cl-letf (((symbol-function 'display-warning)
+                 (lambda (_type message &rest _) (push message warnings))))
+        (vulpea-para-agenda-files-update)
+        (should (= 1 (length warnings)))
+        (should (string-match-p "vulpea-para-agenda-backfill" (car warnings)))
+        ;; the second update stays quiet
+        (vulpea-para-agenda-files-update)
+        (should (= 1 (length warnings)))))))
+
+(ert-deftest vulpea-para-agenda-files-update-warn-quiet-test ()
+  "No warning when nothing is missing, or when the check is turned off."
+  (vulpea-para-test--with-temp-db
+    (vulpea-para-test--insert "a1" "F1" :level 0 :tags '("agenda")
+                              :path "/tmp/f1.org")
+    (vulpea-para-test--insert "h1" "do it" :level 1 :todo "TODO"
+                              :path "/tmp/f1.org")
+    ;; nothing missing -> quiet
+    (let ((vulpea-para-agenda--warned-missing nil)
+          (org-agenda-files nil)
+          (warnings nil))
+      (cl-letf (((symbol-function 'display-warning)
+                 (lambda (_type message &rest _) (push message warnings))))
+        (vulpea-para-agenda-files-update)
+        (should-not warnings))))
+  (vulpea-para-test--with-temp-db
+    (vulpea-para-test--insert "a1" "F1" :level 0 :path "/tmp/f1.org")
+    (vulpea-para-test--insert "h1" "do it" :level 1 :todo "TODO"
+                              :path "/tmp/f1.org")
+    ;; check turned off -> quiet even with a missing file
+    (let ((vulpea-para-agenda-warn-missing nil)
+          (vulpea-para-agenda--warned-missing nil)
+          (org-agenda-files nil)
+          (warnings nil))
+      (cl-letf (((symbol-function 'display-warning)
+                 (lambda (_type message &rest _) (push message warnings))))
+        (vulpea-para-agenda-files-update)
+        (should-not warnings)))))
+
 ;;; Refile
 
 (ert-deftest vulpea-para-refile-files-test ()

@@ -56,6 +56,8 @@ The category is what makes your agenda read "Blog > Ship the v2.1 post" instead 
 
 Here is the part that scales. Walking thousands of notes to find the few with tasks is hopeless, so =vulpea-para= does not. Whenever you save a note, it checks whether the file holds any open work and tags it =agenda= when it does, dropping the tag when the last task is done. Your =org-agenda-files= is then just the set of files carrying that tag, fetched from the database in a few milliseconds. A file slips in and out of your agenda on its own as work appears and finishes, and you never maintain a list of agenda files again. Only notes in your vault are watched this way, so the Org files you edit elsewhere stay untouched (=vulpea-para-agenda-tag-scope= controls that boundary).
 
+Because the tag is maintained on save, notes you wrote *before* turning this on have not been tagged yet, and their TODOs stay off the agenda until each file is saved again. You do not have to re-save anything by hand: the first agenda build of a session notices the drift and warns, and =M-x vulpea-para-agenda-backfill= tags every such file in one go.
+
 =setup-defaults= turned this on (it is =vulpea-para-agenda-mode= underneath) and gave you a dispatcher. Three commands open views into it:
 
 - =vulpea-para-agenda-main= is the dispatcher itself: refile, today, focus, stuck projects, waiting, and this quarter.

@@ -28,24 +28,6 @@
 (require 'vulpea-para-db)
 (require 'vulpea-para-agenda)
 
-(defcustom vulpea-para-done-keywords '("DONE" "CANCELLED")
-  "TODO keywords that count as finished, for database-side checks.
-
-The save-time agenda check uses org's own done and not-done
-classification.  This list is the approximation the doctor uses when it
-reasons from the database alone, where a file's own keyword setup is
-not available."
-  :type '(repeat string)
-  :group 'vulpea-para)
-
-(defun vulpea-para--note-open-p (note)
-  "Return non-nil when NOTE is an open task, in the database sense.
-
-A note is open when it has a TODO keyword that is not one of
-`vulpea-para-done-keywords'."
-  (let ((todo (vulpea-note-todo note)))
-    (and todo (not (member todo vulpea-para-done-keywords)))))
-
 (defun vulpea-para-doctor-orphan-projects ()
   "Return the projects that do not live in any area.
 

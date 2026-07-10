@@ -162,9 +162,138 @@ so the agenda-mode advice does not overwrite the restriction.
 
 Ignores its arguments, so it works as :before advice on `org-agenda'
 and `org-todo-list'.  Does nothing while
-`vulpea-para-agenda-inhibit-files-update' is non-nil."
+`vulpea-para-agenda-inhibit-files-update' is non-nil.  The first update
+of a session also checks for files the agenda is missing; see
+`vulpea-para-agenda-warn-missing'."
   (unless vulpea-para-agenda-inhibit-files-update
-    (setq org-agenda-files (vulpea-para-agenda-files))))
+    (setq org-agenda-files (vulpea-para-agenda-files))
+    (vulpea-para-agenda--warn-missing)))
+
+;;; Backfill (catching up a vault that predates the mode)
+;;
+;; The agenda tag is maintained on save, so a file whose open work
+;; predates `vulpea-para-agenda-mode' is invisible to the agenda until
+;; it happens to be saved again.  These pieces find that drift from the
+;; database (no file visits) and fix it in one command.
+
+(defcustom vulpea-para-done-keywords '("DONE" "CANCELLED")
+  "TODO keywords that count as finished, for database-side checks.
+
+The save-time agenda check uses org's own done and not-done
+classification.  This list is the approximation used when reasoning
+from the database alone (the doctor,
+`vulpea-para-agenda-missing-files'), where a file's own keyword setup
+is not available."
+  :type '(repeat string)
+  :group 'vulpea-para)
+
+(defun vulpea-para--note-open-p (note)
+  "Return non-nil when NOTE is an open task, in the database sense.
+
+A note is open when it has a TODO keyword that is not one of
+`vulpea-para-done-keywords'."
+  (let ((todo (vulpea-note-todo note)))
+    (and todo (not (member todo vulpea-para-done-keywords)))))
+
+(defun vulpea-para-agenda-missing-files ()
+  "Return the paths of files holding open work but missing the agenda tag.
+
+These files never show up in the agenda even though, as far as the
+database can tell, they hold open work: an open TODO, a heading tagged
+with one of `vulpea-para-open-work-tags', or a pin through
+`vulpea-para-open-work-files'.  Files whose note is rejected by
+`vulpea-para-agenda-files-filter' are kept out on purpose and not
+counted.  Run `vulpea-para-agenda-backfill' to tag them all at once.
+
+This is a pure database query; no file is visited."
+  (let ((tagged (make-hash-table :test 'equal))
+        (paths nil))
+    (dolist (note (vulpea-db-query-by-tags-some (list vulpea-para-agenda-tag)))
+      (puthash (vulpea-note-path note) t tagged))
+    (dolist (note (vulpea-db-query
+                   (lambda (note)
+                     (or (vulpea-para--note-open-p note)
+                         (seq-intersection (vulpea-note-tags note)
+                                           vulpea-para-open-work-tags)))))
+      (push (vulpea-note-path note) paths))
+    (when vulpea-para-open-work-files
+      (dolist (note (vulpea-db-query-by-level 0))
+        (when (vulpea-para--open-work-path-p (vulpea-note-path note))
+          (push (vulpea-note-path note) paths))))
+    (setq paths (seq-remove (lambda (path) (gethash path tagged))
+                            (seq-uniq paths)))
+    (when (and paths vulpea-para-agenda-files-filter)
+      (let ((rejected (make-hash-table :test 'equal)))
+        (dolist (note (vulpea-db-query-by-file-paths paths 0))
+          (unless (funcall vulpea-para-agenda-files-filter note)
+            (puthash (vulpea-note-path note) t rejected)))
+        (setq paths (seq-remove (lambda (path) (gethash path rejected))
+                                paths))))
+    paths))
+
+;;;###autoload
+(defun vulpea-para-agenda-backfill ()
+  "Add the agenda tag to every file that holds open work without it.
+
+Visits each file `vulpea-para-agenda-missing-files' reports, re-runs
+the save-time open-work check there, and saves the ones that change,
+so a stale database row never mis-tags a file.  A file already open in
+a modified buffer is tagged but not saved, so none of your unsaved
+edits are committed behind your back.
+
+This is the onboarding command for a vault that predates
+`vulpea-para-agenda-mode': run it once and the agenda catches up."
+  (interactive)
+  (let ((paths (vulpea-para-agenda-missing-files))
+        (tagged 0))
+    (if (null paths)
+        (message "vulpea-para: the agenda is not missing any files")
+      (dolist (path paths)
+        (let* ((existing (find-buffer-visiting path))
+               (buffer (or existing (find-file-noselect path))))
+          (with-current-buffer buffer
+            (let ((modified (buffer-modified-p)))
+              (vulpea-para-update-agenda-tag)
+              (when (and (buffer-modified-p) (not modified))
+                (save-buffer)
+                (setq tagged (1+ tagged)))))
+          (unless existing
+            (kill-buffer buffer))))
+      (message "vulpea-para: tagged %d of %d file%s missing from the agenda"
+               tagged (length paths) (if (= (length paths) 1) "" "s")))))
+
+(defcustom vulpea-para-agenda-warn-missing t
+  "Non-nil means check once per session for files the agenda is missing.
+
+The agenda only scans files carrying the agenda tag, and the tag is
+maintained on save, so open work that was last saved without
+`vulpea-para-agenda-mode' never shows up.  When this is non-nil, the
+first agenda build of a session looks for such files in the database (a
+fast query, no file visits) and suggests `vulpea-para-agenda-backfill'
+when it finds any.  Set to nil to keep the agenda quiet about it."
+  :type 'boolean
+  :group 'vulpea-para)
+
+(defvar vulpea-para-agenda--warned-missing nil
+  "Non-nil after the once-per-session missing-files check has run.
+
+Reset when `vulpea-para-agenda-mode' is turned on, so re-enabling the
+mode re-arms the check.")
+
+(defun vulpea-para-agenda--warn-missing ()
+  "Warn, once per session, about files the agenda is missing.
+
+See `vulpea-para-agenda-warn-missing'."
+  (when (and vulpea-para-agenda-warn-missing
+             (not vulpea-para-agenda--warned-missing))
+    (setq vulpea-para-agenda--warned-missing t)
+    (when-let* ((missing (vulpea-para-agenda-missing-files)))
+      (display-warning
+       'vulpea-para
+       (format "%d file%s with open work %s missing from the agenda (no agenda tag); run M-x vulpea-para-agenda-backfill to catch up"
+               (length missing)
+               (if (= 1 (length missing)) "" "s")
+               (if (= 1 (length missing)) "is" "are"))))))
 
 ;;; Agenda predicates (operate on the heading at point)
 ;;
@@ -320,6 +449,7 @@ agenda on its own as work appears and finishes."
   :group 'vulpea-para
   (if vulpea-para-agenda-mode
       (progn
+        (setq vulpea-para-agenda--warned-missing nil)
         (add-hook 'org-mode-hook #'vulpea-para--install-save-hook)
         (advice-add 'org-agenda :before #'vulpea-para-agenda-files-update)
         (advice-add 'org-todo-list :before #'vulpea-para-agenda-files-update))

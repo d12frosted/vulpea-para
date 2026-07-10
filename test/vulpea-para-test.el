@@ -576,6 +576,109 @@ their own (org scans headings inside the returned files itself)."
            (lambda (n) (not (vulpea-note-tagged-any-p n "cemetery")))))
       (should (equal '("/tmp/blog.org") (vulpea-para-refile-files))))))
 
+(ert-deftest vulpea-para-refile-target-table-test ()
+  "The target table is built from the database, files not touched.
+
+Entries have the `org-refile-get-targets' shape: (TARGET FILE RE POS),
+one file entry plus one entry per heading, outline paths reconstructed
+from levels and positions, area files first."
+  (vulpea-para-test--with-temp-db
+    (vulpea-para-test--insert "r1" "Emacs" :level 0
+                              :path "/tmp/emacs.org" :pos 1)
+    (vulpea-para-test--insert "a1" "Blog" :level 0 :tags '("area")
+                              :path "/tmp/blog.org" :pos 1)
+    (vulpea-para-test--insert "h1" "Tasks" :level 1
+                              :path "/tmp/blog.org" :pos 100)
+    (vulpea-para-test--insert "h2" "Ship v2" :level 2 :tags '("project")
+                              :path "/tmp/blog.org" :pos 200)
+    (vulpea-para-test--insert "h3" "Notes" :level 1
+                              :path "/tmp/blog.org" :pos 50)
+    (let ((org-refile-use-outline-path 'file))
+      (should (equal
+               `(("blog.org" "/tmp/blog.org" nil nil)
+                 ("blog.org/Notes" "/tmp/blog.org" ,org-outline-regexp 50)
+                 ("blog.org/Tasks" "/tmp/blog.org" ,org-outline-regexp 100)
+                 ("blog.org/Tasks/Ship v2" "/tmp/blog.org" ,org-outline-regexp 200)
+                 ("emacs.org" "/tmp/emacs.org" nil nil))
+               (vulpea-para-refile-target-table))))))
+
+(ert-deftest vulpea-para-refile-target-table-levels-test ()
+  "The spec's :maxlevel and :level bound which headings are offered."
+  (vulpea-para-test--with-temp-db
+    (vulpea-para-test--insert "a1" "Blog" :level 0 :tags '("area")
+                              :path "/tmp/blog.org" :pos 1)
+    (vulpea-para-test--insert "h1" "Tasks" :level 1
+                              :path "/tmp/blog.org" :pos 100)
+    (vulpea-para-test--insert "h2" "Ship v2" :level 2 :tags '("project")
+                              :path "/tmp/blog.org" :pos 200)
+    (let ((org-refile-use-outline-path 'file))
+      ;; :maxlevel keeps deeper headings out
+      (should (equal
+               `(("blog.org" "/tmp/blog.org" nil nil)
+                 ("blog.org/Tasks" "/tmp/blog.org" ,org-outline-regexp 100))
+               (vulpea-para-refile-target-table '(:maxlevel . 1))))
+      ;; :level offers exactly that level, with full outline paths
+      (should (equal
+               `(("blog.org" "/tmp/blog.org" nil nil)
+                 ("blog.org/Tasks/Ship v2" "/tmp/blog.org"
+                  ,org-outline-regexp 200))
+               (vulpea-para-refile-target-table '(:level . 2))))
+      ;; the (KEY N) spelling org accepts works too
+      (should (equal (vulpea-para-refile-target-table '(:maxlevel . 1))
+                     (vulpea-para-refile-target-table '(:maxlevel 1)))))))
+
+(ert-deftest vulpea-para-refile-target-table-outline-path-styles-test ()
+  "Target strings follow `org-refile-use-outline-path'."
+  (vulpea-para-test--with-temp-db
+    (vulpea-para-test--insert "a1" "Blog" :level 0 :tags '("area")
+                              :path "/tmp/blog.org" :pos 1)
+    (vulpea-para-test--insert "h1" "A/B testing" :level 1
+                              :path "/tmp/blog.org" :pos 100)
+    ;; nil: bare heading text, no file entries
+    (let ((org-refile-use-outline-path nil))
+      (should (equal
+               `(("A/B testing" "/tmp/blog.org" ,org-outline-regexp 100))
+               (vulpea-para-refile-target-table))))
+    ;; t: outline path without the file, slashes escaped like org does
+    (let ((org-refile-use-outline-path t))
+      (should (equal
+               `(("A\\/B testing" "/tmp/blog.org" ,org-outline-regexp 100))
+               (vulpea-para-refile-target-table))))
+    ;; title: the note's title leads the path
+    (let ((org-refile-use-outline-path 'title))
+      (should (equal
+               `(("Blog" "/tmp/blog.org" nil nil)
+                 ("Blog/A\\/B testing" "/tmp/blog.org"
+                  ,org-outline-regexp 100))
+               (vulpea-para-refile-target-table))))))
+
+(ert-deftest vulpea-para-refile-mode-test ()
+  "The mode answers `org-refile-get-targets' from the database.
+
+When `org-refile-targets' is the vulpea-para spec, targets come from
+the target table and no file is visited; any other value falls through
+to org's own scan (here: the current buffer)."
+  (vulpea-para-test--with-temp-db
+    (vulpea-para-test--insert "a1" "Blog" :level 0 :tags '("area")
+                              :path "/tmp/does-not-exist-blog.org" :pos 1)
+    (unwind-protect
+        (progn
+          (vulpea-para-refile-mode 1)
+          (let ((org-refile-use-outline-path 'file)
+                (org-refile-targets
+                 '((vulpea-para-refile-files :maxlevel . 3))))
+            (should (equal (vulpea-para-refile-target-table '(:maxlevel . 3))
+                           (org-refile-get-targets))))
+          ;; unrelated targets fall through to org's own scanner
+          (with-temp-buffer
+            (org-mode)
+            (insert "* Local heading\n")
+            (let ((org-refile-use-outline-path nil)
+                  (org-refile-targets nil))
+              (should (equal "Local heading"
+                             (caar (org-refile-get-targets)))))))
+      (vulpea-para-refile-mode -1))))
+
 (ert-deftest vulpea-para-refile-verify-target-test ()
   "Archived headings are not refile targets; their subtree is skipped."
   (with-temp-buffer
@@ -594,8 +697,11 @@ their own (org scans headings inside the returned files itself)."
 
 (ert-deftest vulpea-para-setup-defaults-test ()
   "Setup-defaults installs the agenda commands and capture templates."
-  (cl-letf (((symbol-function 'vulpea-para-agenda-mode) #'ignore))
-    (let ((vulpea-para-agenda-main-buffer-name "*test agenda*")
+  (let (refile-mode-arg)
+    (cl-letf (((symbol-function 'vulpea-para-agenda-mode) #'ignore)
+              ((symbol-function 'vulpea-para-refile-mode)
+               (lambda (arg) (setq refile-mode-arg arg))))
+      (let ((vulpea-para-agenda-main-buffer-name "*test agenda*")
           org-agenda-custom-commands
           org-agenda-prefix-format
           org-capture-templates
@@ -614,6 +720,8 @@ their own (org scans headings inside the returned files itself)."
       (should (eq 'confirm org-refile-allow-creating-parent-nodes))
       (should (eq #'vulpea-para-refile-verify-target
                   org-refile-target-verify-function))
+      ;; and the targets are answered from the database
+      (should (equal 1 refile-mode-arg))
       (should (assoc "p" org-capture-templates))
       (should (assoc "m" org-capture-templates))
       (should org-agenda-prefix-format)
@@ -625,7 +733,7 @@ their own (org scans headings inside the returned files itself)."
       (should (plist-get (nthcdr 5 (assoc "m" org-capture-templates))
                          :clock-in))
       (should (plist-get (nthcdr 5 (assoc "m" org-capture-templates))
-                         :clock-resume)))))
+                         :clock-resume))))))
 
 (provide 'vulpea-para-test)
 ;;; vulpea-para-test.el ends here

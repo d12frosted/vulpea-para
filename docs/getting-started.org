@@ -64,7 +64,7 @@ Here is the part that scales. Walking thousands of notes to find the few with ta
 
 * Refiling into place
 
-Captured tasks pile up in an inbox, and the dispatcher's first block ("To refile") shows them. Press =C-c C-w= on one (in the agenda or in the file) and the target list covers your whole vault: every live note, area files first, by outline path. This matters because =org-agenda-files= is only the files that already hold open work; refiling is exactly how a task reaches a note that had none, so the targets come from the database instead. Archived subtrees stay out of the list.
+Captured tasks pile up in an inbox, and the dispatcher's first block ("To refile") shows them. Press =C-c C-w= on one (in the agenda or in the file) and the target list covers your whole vault: every live note, area files first, by outline path. This matters because =org-agenda-files= is only the files that already hold open work; refiling is exactly how a task reaches a note that had none, so the targets come from the database instead. That is also what keeps it instant: org would normally visit every candidate file to build the list, minutes of "Getting targets..." on a real vault, while the database answers in a moment without touching a file.
 
 =setup-defaults= wires this up. If a note should never be offered as a target, point =vulpea-para-refile-files-filter= at a predicate that rejects it.
 

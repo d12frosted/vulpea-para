@@ -90,9 +90,11 @@ It overwrites `org-agenda-custom-commands',
 `org-capture-templates'.  The main agenda is named with
 `vulpea-para-agenda-main-buffer-name', the meeting template clocks in,
 and refile reaches every live note in the vault (see
-`vulpea-para-refile-files'), not just the agenda files.  Skip it and
-wire things by hand if you want full control over the layout (see the
-README)."
+`vulpea-para-refile-files'), not just the agenda files.  It also turns
+on `vulpea-para-refile-mode', which answers the refile target list
+from the database instead of letting org visit every file.  Skip it
+and wire things by hand if you want full control over the layout (see
+the README)."
   (vulpea-para-agenda-mode 1)
   (setq org-agenda-custom-commands
         `((" " "PARA agenda"
@@ -108,6 +110,7 @@ README)."
           (todo   . " %(vulpea-para-agenda-category 36) ")
           (tags   . " %(vulpea-para-agenda-category 36) ")
           (search . " %(vulpea-para-agenda-category 36) ")))
+  (vulpea-para-refile-mode 1)
   (setq org-refile-targets '((vulpea-para-refile-files :maxlevel . 3))
         org-refile-use-outline-path 'file
         org-outline-path-complete-in-steps nil

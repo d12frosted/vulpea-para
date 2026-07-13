@@ -304,6 +304,38 @@
       (setq buffer-file-name "/tmp/vault/note.org")
       (should-not (vulpea-para-vault-buffer-p)))))
 
+(ert-deftest vulpea-para-vault-buffer-p-symlink-test ()
+  "A vault reached through a symlink still counts, either side linked.
+
+Termux and iCloud/Dropbox setups reach the vault through a symlink, so
+the buffer's truename and the configured directory disagree on the
+symlink; the scope check has to resolve both before comparing."
+  (let* ((real (file-truename (make-temp-file "vp-vault-real-" t)))
+         (link (concat (file-truename
+                        (make-temp-file "vp-vault-link-" t))
+                       "/vault")))
+    (unwind-protect
+        (progn
+          (make-symbolic-link real link)
+          ;; sync dir is the symlink, the buffer visits the real path
+          (let ((vulpea-db-sync-directories (list link)))
+            (with-temp-buffer
+              (setq buffer-file-name (expand-file-name "note.org" real))
+              (should (vulpea-para-vault-buffer-p))))
+          ;; sync dir is the real path, the buffer visits the symlink
+          (let ((vulpea-db-sync-directories (list real)))
+            (with-temp-buffer
+              (setq buffer-file-name (expand-file-name "note.org" link))
+              (should (vulpea-para-vault-buffer-p))))
+          ;; a file outside the vault is still rejected
+          (let ((vulpea-db-sync-directories (list link)))
+            (with-temp-buffer
+              (setq buffer-file-name "/tmp/elsewhere/readme.org")
+              (should-not (vulpea-para-vault-buffer-p)))))
+      (when (file-symlink-p link) (delete-file link))
+      (delete-directory real t)
+      (delete-directory (file-name-directory link) t))))
+
 (ert-deftest vulpea-para-maybe-update-agenda-tag-scope-test ()
   "The save-time updater only tags buffers the scope predicate accepts."
   ;; scope rejects the buffer -> no agenda tag even with open work

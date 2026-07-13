@@ -403,13 +403,17 @@ Handy in `org-agenda-prefix-format', for example:
 A file is in the vault when it lives under one of
 `vulpea-db-sync-directories'.  This is the default scope for
 `vulpea-para-agenda-mode', so Org files you edit outside your notes are
-never touched."
+never touched.
+
+Both sides are resolved with `file-truename' before comparing, so a
+vault reached through a symlink (a Termux storage link, an iCloud or
+Dropbox path) still matches when only one side carries the link."
   (when-let* ((file (buffer-file-name))
               (dirs (bound-and-true-p vulpea-db-sync-directories)))
-    (let ((file (expand-file-name file)))
+    (let ((file (file-truename file)))
       (seq-some
        (lambda (dir)
-         (string-prefix-p (file-name-as-directory (expand-file-name dir))
+         (string-prefix-p (file-name-as-directory (file-truename dir))
                           file))
        dirs))))
 

@@ -397,6 +397,8 @@ Handy in `org-agenda-prefix-format', for example:
                         (t "Q4"))))
     (format "%02d%s" yy quarter)))
 
+(declare-function vulpea-db-sync-tracked-file-p "vulpea-db-sync" (path))
+
 (defun vulpea-para-vault-buffer-p ()
   "Return non-nil when the current buffer visits a file in your vault.
 
@@ -405,17 +407,21 @@ A file is in the vault when it lives under one of
 `vulpea-para-agenda-mode', so Org files you edit outside your notes are
 never touched.
 
-Both sides are resolved with `file-truename' before comparing, so a
-vault reached through a symlink (a Termux storage link, an iCloud or
-Dropbox path) still matches when only one side carries the link."
-  (when-let* ((file (buffer-file-name))
-              (dirs (bound-and-true-p vulpea-db-sync-directories)))
-    (let ((file (file-truename file)))
-      (seq-some
-       (lambda (dir)
-         (string-prefix-p (file-name-as-directory (file-truename dir))
-                          file))
-       dirs))))
+Delegates to `vulpea-db-sync-tracked-file-p' when the installed vulpea
+provides it (that is the single source of truth, and resolves symlinks
+on both sides so a vault reached through a link still matches).  On an
+older vulpea it falls back to the same `file-truename' comparison
+inline, so the check keeps working without requiring a vulpea upgrade."
+  (when-let* ((file (buffer-file-name)))
+    (if (fboundp 'vulpea-db-sync-tracked-file-p)
+        (vulpea-db-sync-tracked-file-p file)
+      (when-let* ((dirs (bound-and-true-p vulpea-db-sync-directories)))
+        (let ((file (file-truename file)))
+          (seq-some
+           (lambda (dir)
+             (string-prefix-p (file-name-as-directory (file-truename dir))
+                              file))
+           dirs))))))
 
 (defcustom vulpea-para-agenda-tag-scope #'vulpea-para-vault-buffer-p
   "Predicate choosing which buffers `vulpea-para-agenda-mode' tags on save.
